@@ -79,68 +79,10 @@
         _pubsub_observers = {},
 
         /* skip published items older than current timestamp */
-        _pubsub_last = +new Date(), 
+        _pubsub_last = +new Date(),
 
         /* Next check for TTL */
         _ttl_timeout,
-
-        /**
-         * XML encoding and decoding as XML nodes can't be JSON'ized
-         * XML nodes are encoded and decoded if the node is the value to be saved
-         * but not if it's as a property of another object
-         * Eg. -
-         *   $.jStorage.set("key", xmlNode);        // IS OK
-         *   $.jStorage.set("key", {xml: xmlNode}); // NOT OK
-         */
-        _XMLService = {
-
-            /**
-             * Validates a XML node to be XML
-             * based on jQuery.isXML function
-             */
-            isXML: function(elm){
-                var documentElement = (elm ? elm.ownerDocument || elm : 0).documentElement;
-                return documentElement ? documentElement.nodeName !== "HTML" : false;
-            },
-
-            /**
-             * Encodes a XML node to string
-             * based on http://www.mercurytide.co.uk/news/article/issues-when-working-ajax/
-             */
-            encode: function(xmlNode) {
-                if(!this.isXML(xmlNode)){
-                    return false;
-                }
-                try{ // Mozilla, Webkit, Opera
-                    return new XMLSerializer().serializeToString(xmlNode);
-                }catch(E1) {
-                    try {  // IE
-                        return xmlNode.xml;
-                    }catch(E2){}
-                }
-                return false;
-            },
-
-            /**
-             * Decodes a XML node from string
-             * loosely based on http://outwestmedia.com/jquery-plugins/xmldom/
-             */
-            decode: function(xmlString){
-                var dom_parser = ("DOMParser" in window && (new DOMParser()).parseFromString) ||
-                        (window.ActiveXObject && function(_xmlString) {
-                    var xml_doc = new ActiveXObject('Microsoft.XMLDOM');
-                    xml_doc.async = 'false';
-                    xml_doc.loadXML(_xmlString);
-                    return xml_doc;
-                }),
-                resultXML;
-                if(!dom_parser){
-                    return false;
-                }
-                resultXML = dom_parser.call("DOMParser" in window && (new DOMParser()) || window, xmlString, 'text/xml');
-                return this.isXML(resultXML)?resultXML:false;
-            }
-        },
 
         _localStoragePolyfillSetKey = function(){};
 
@@ -256,7 +198,7 @@
     function _createPolyfillStorage(type, forceCreate){
         var _skipSave = false,
             _length = 0,
-            i, 
+            i,
             storage,
             storage_source = {};
 
@@ -272,7 +214,7 @@
             return;
         }
 
-        // only IE6/7 from this point on 
+        // only IE6/7 from this point on
         if(_backend != "userDataBehavior"){
             return;
         }
@@ -300,7 +242,7 @@
                 storage[i] = storage_source[i];
             }
         }
-        
+
         // Polyfill API
 
         /**
@@ -310,7 +252,7 @@
 
         /**
          * Returns the key of the nth stored value
-         * 
+         *
          * @param {Number} n Index position
          * @return {String} Key name of the nth stored value
          */
@@ -345,7 +287,7 @@
          * Sets or updates value for a give key
          *
          * @param {String} key Key name to be updated
-         * @param {String} value String value to be stored 
+         * @param {String} value String value to be stored
          */
         storage.setItem = function(key, value){
             if(typeof value == "undefined"){
@@ -365,7 +307,7 @@
             }
 
             storage[key] = undefined;
-            
+
             _skipSave = true;
             if(key in storage){
                 storage.removeAttribute(key);
@@ -783,7 +725,7 @@
         if(!_storage.__jstorage_meta.PubSub){
             _storage.__jstorage_meta.PubSub = [];
         }
-        
+
         _storage.__jstorage_meta.PubSub.unshift([+new Date, channel, payload]);
 
         _save();
@@ -795,12 +737,12 @@
      * JS Implementation of MurmurHash2
      *
      *  SOURCE: https://github.com/garycourt/murmurhash-js (MIT licensed)
-     * 
+     *
      * @author <a href="mailto:gary.court@gmail.com">Gary Court</a>
      * @see http://github.com/garycourt/murmurhash-js
      * @author <a href="mailto:aappleby@gmail.com">Austin Appleby</a>
      * @see http://sites.google.com/site/murmurhash/
-     * 
+     *
      * @param {string} str ASCII only
      * @param {number} seed Positive integer only
      * @return {number} 32-bit positive integer hash
@@ -812,14 +754,14 @@
             h = seed ^ l,
             i = 0,
             k;
-      
+
         while (l >= 4) {
-            k = 
+            k =
                 ((str.charCodeAt(i) & 0xff)) |
                 ((str.charCodeAt(++i) & 0xff) << 8) |
                 ((str.charCodeAt(++i) & 0xff) << 16) |
                 ((str.charCodeAt(++i) & 0xff) << 24);
-        
+
             k = (((k & 0xffff) * 0x5bd1e995) + ((((k >>> 16) * 0x5bd1e995) & 0xffff) << 16));
             k ^= k >>> 24;
             k = (((k & 0xffff) * 0x5bd1e995) + ((((k >>> 16) * 0x5bd1e995) & 0xffff) << 16));
@@ -829,7 +771,7 @@
             l -= 4;
             ++i;
         }
-      
+
         switch (l) {
             case 3: h ^= (str.charCodeAt(i + 2) & 0xff) << 16;
             case 2: h ^= (str.charCodeAt(i + 1) & 0xff) << 8;
@@ -872,9 +814,7 @@
                 return value;
             }
 
-            if(_XMLService.isXML(value)){
-                value = {_is_xml:true,xml:_XMLService.encode(value)};
-            }else if(typeof value == "function"){
+            if(typeof value == "function"){
                 return undefined; // functions can't be saved!
             }else if(value && typeof value == "object"){
                 // clone the object before saving to _storage tree
@@ -903,13 +843,7 @@
         get: function(key, def){
             _checkKey(key);
             if(key in _storage){
-                if(_storage[key] && typeof _storage[key] == "object" &&
-                        _storage[key]._is_xml &&
-                            _storage[key]._is_xml){
-                    return _XMLService.decode(_storage[key].xml);
-                }else{
-                    return _storage[key];
-                }
+                return _storage[key];
             }
             return typeof(def) == 'undefined' ? null : def;
         },
